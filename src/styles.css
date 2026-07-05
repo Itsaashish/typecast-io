@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: dark --default, light, slate, coffee, cupcake, synthwave, dracula, nord;
+}
+
+@plugin "daisyui/theme" {
+  name: "slate";
+  --color-primary: #3B82F6;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #64748B;
+  --color-accent: #3B82F6;
+  --color-neutral: #1E293B;
+  --color-neutral-content: #F8FAFC;
+  --color-base-100: #0F172A;
+  --color-base-200: #1E293B;
+  --color-base-300: #334155;
+  --color-base-content: #F8FAFC;
+  --color-info: #3B82F6;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+}
+
+/* Custom Scrollbars */
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-color: var(--scrollbar-thumb, #475569) var(--scrollbar-track, #0F172A);
+    scrollbar-width: thin;
+  }
+}
+
+/* Fallback legacy scrollbars for older browsers */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0F172A;
+  }
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}

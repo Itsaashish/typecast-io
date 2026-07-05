@@ -1,0 +1,4 @@
+/* Component-specific styling rules for App component */
+:host {
+  display: block;
+}

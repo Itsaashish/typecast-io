@@ -1,0 +1,18 @@
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ToastService } from '../../../core/services/toast.service';
+
+@Component({
+  selector: 'app-toast',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './toast.component.html',
+  styleUrl: './toast.component.css'
+})
+export class ToastComponent {
+  public toastService = inject(ToastService);
+
+  remove(id: number): void {
+    this.toastService.toasts.update(list => list.filter(t => t.id !== id));
+  }
+}
