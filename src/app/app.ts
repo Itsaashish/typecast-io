@@ -57,27 +57,6 @@ export class App implements OnInit {
 
   public themes: ('dark' | 'light' | 'slate' | 'coffee' | 'cupcake' | 'synthwave' | 'dracula' | 'nord')[] = ['dark', 'light', 'slate', 'coffee', 'cupcake', 'synthwave', 'dracula', 'nord'];
 
-  private readonly defaultCodeInput = `export interface User {
-  id: number;
-  name: string;
-  email: string;
-  isActive: boolean;
-  createdAt: Date;
-  profile: Profile;
-  projects: Project[];
-}
-
-export interface Profile {
-  avatarUrl: string;
-  bio: string;
-}
-
-export interface Project {
-  id: number;
-  name: string;
-  status: string;
-}`;
-  
   // Toggles
   public isNullable = signal<boolean>(true);
   public isGenerating = signal<boolean>(false);
@@ -96,73 +75,14 @@ export interface Project {
 
   // Initial demonstration JSON
   private readonly defaultJson = {
-    id: 1,
+    id: 101,
     name: "John Doe",
-    email: "john.doe@example.com",
-    is_active: true,
-    created_at: "2026-07-05T10:14:42Z",
-    roles: ["USER", "ADMIN", "USER"],
-    profile: {
-      avatar_url: "https://example.com/avatar.jpg",
-      bio: "Senior Software Engineer"
-    },
-    projects: [
-      {
-        id: 101,
-        name: "Antigravity IDE",
-        status: "completed"
-      },
-      {
-        id: 102,
-        name: "Model Checking Tool",
-        status: "pending"
-      }
-    ]
+    email: "john@example.com",
+    age: 24,
+    isActive: true
   };
 
-  private readonly defaultXml = `<root>
-  <id>1</id>
-  <name>John Doe</name>
-  <email>john.doe@example.com</email>
-  <is_active>true</is_active>
-  <created_at>2026-07-05T10:14:42Z</created_at>
-  <profile>
-    <avatar_url>https://example.com/avatar.jpg</avatar_url>
-    <bio>Senior Software Engineer</bio>
-  </profile>
-  <projects>
-    <project>
-      <id>101</id>
-      <name>Antigravity IDE</name>
-      <status>completed</status>
-    </project>
-    <project>
-      <id>102</id>
-      <name>Model Checking Tool</name>
-      <status>pending</status>
-    </project>
-  </projects>
-</root>`;
 
-  private readonly defaultYaml = `id: 1
-name: John Doe
-email: john.doe@example.com
-is_active: true
-created_at: 2026-07-05T10:14:42Z
-profile:
-  avatar_url: https://example.com/avatar.jpg
-  bio: Senior Software Engineer
-projects:
-  - id: 101
-    name: Antigravity IDE
-    status: completed
-  - id: 102
-    name: Model Checking Tool
-    status: pending`;
-
-  private readonly defaultCsv = `id,name,email,is_active,status
-1,John Doe,john.doe@example.com,true,completed
-2,Jane Smith,jane.smith@example.com,false,pending`;
 
   ngOnInit() {
     // Load saved preferences if any
@@ -276,27 +196,15 @@ projects:
   setInputFormat(format: string) {
     const current = this.jsonInput().trim();
     
-    // Check if input is empty or matches one of the defaults
+    // Check if input is empty or matches the default JSON
     const isDefault = !current || 
-      current === JSON.stringify(this.defaultJson, null, 2).trim() ||
-      current === this.defaultXml.trim() ||
-      current === this.defaultYaml.trim() ||
-      current === this.defaultCsv.trim() ||
-      current === this.defaultCodeInput.trim();
+      current === JSON.stringify(this.defaultJson, null, 2).trim();
 
     this.inputFormat.set(format);
     
     if (isDefault) {
       if (format === 'json') {
         this.jsonInput.set(JSON.stringify(this.defaultJson, null, 2));
-      } else if (format === 'xml') {
-        this.jsonInput.set(this.defaultXml);
-      } else if (format === 'yaml') {
-        this.jsonInput.set(this.defaultYaml);
-      } else if (format === 'csv') {
-        this.jsonInput.set(this.defaultCsv);
-      } else {
-        this.jsonInput.set(this.defaultCodeInput);
       }
     }
     

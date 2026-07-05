@@ -81,25 +81,15 @@ export class MonacoEditorComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private loadMonaco() {
-    // Check if monaco is already loaded
     if (typeof monaco !== 'undefined') {
       this.initEditor();
       return;
     }
 
-    const loaderScriptId = 'monaco-loader-script';
-    let loaderScript = document.getElementById(loaderScriptId) as HTMLScriptElement;
-
-    if (!loaderScript) {
-      loaderScript = document.createElement('script');
-      loaderScript.id = loaderScriptId;
-      loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.js';
-      loaderScript.async = true;
-      document.body.appendChild(loaderScript);
-    }
-
     const checkAndInit = () => {
-      if ((window as any).require) {
+      if ((window as any).require && (window as any).monaco) {
+        this.initEditor();
+      } else if ((window as any).require) {
         (window as any).require.config({
           paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
         });
@@ -107,18 +97,11 @@ export class MonacoEditorComponent implements OnInit, OnChanges, OnDestroy {
           this.initEditor();
         });
       } else {
-        setTimeout(checkAndInit, 50);
+        setTimeout(checkAndInit, 30);
       }
     };
 
-    if (loaderScript.onload) {
-      // Script is already loading, wait for it
-      checkAndInit();
-    } else {
-      loaderScript.onload = () => {
-        checkAndInit();
-      };
-    }
+    checkAndInit();
   }
 
   private initEditor() {
