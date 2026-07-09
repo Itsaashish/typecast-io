@@ -35,7 +35,7 @@ Operating entirely on the client side, TypeCast.io allows developers to paste JS
 - **Forms**: Angular Reactive Forms
 - **Styling**: Tailwind CSS v4.0 & PostCSS
 - **Component System**: daisyUI v5
-- **Core Editor**: Monaco Editor (loaded via CDN)
+
 
 ---
 
