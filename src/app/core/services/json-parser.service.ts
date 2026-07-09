@@ -285,8 +285,9 @@ export class JSONParserService {
     this.classesList = [];
     this.classNamesSet.clear();
 
-    if (['typescript', 'csharp', 'java', 'kotlin', 'dart', 'swift', 'go', 'python'].includes(format)) {
-      return this.parseCodeModel(inputStr);
+    const fmt = format.toLowerCase();
+    if (['typescript', 'csharp', 'java', 'kotlin', 'dart', 'swift', 'go', 'python', 'angular-class'].includes(fmt)) {
+      return this.parseCodeModel(inputStr, fmt);
     }
 
     let rootValue: any;
@@ -322,47 +323,305 @@ export class JSONParserService {
   /**
    * Parse programming language code structure to extract models
    */
-  private parseCodeModel(codeStr: string): ModelTree {
+  private parseCodeModel(codeStr: string, format: string): ModelTree {
     this.classesList = [];
     this.classNamesSet.clear();
 
-    // Match class, interface, struct, or record definitions
-    const classRegex = /(?:class|interface|struct|record)\s+(\w+)\s*\{([^}]+)\}/g;
+    const fmt = format.toLowerCase();
+
+    if (fmt === 'python') {
+      // Python Parser
+      const pythonClassRegex = /class\s+(\w+)\s*(?:\([^)]+\))?\s*:\s*\n((?:\s+.+\n*)+)/g;
+      let match;
+      let rootClass: ClassNode | null = null;
+
+      while ((match = pythonClassRegex.exec(codeStr)) !== null) {
+        const className = match[1];
+        const body = match[2];
+        const properties: PropertyNode[] = [];
+
+        const lines = body.split('\n');
+        for (let line of lines) {
+          line = line.trim();
+          if (!line || line.startsWith('#') || line.startsWith('"""')) continue;
+
+          // Strip default value assignments (e.g. "= ...")
+          const eqIdx = line.indexOf('=');
+          let cleanLine = line;
+          if (eqIdx !== -1) {
+            cleanLine = line.slice(0, eqIdx).trim();
+          }
+
+          const propMatch = cleanLine.match(/^(\w+)\s*:\s*([^;=]+)/);
+          if (propMatch) {
+            const name = propMatch[1];
+            const rawType = propMatch[2].trim();
+            const inferredType = this.mapCodeTypeToTypeNode(rawType);
+            properties.push({
+              name,
+              safeName: this.toSafeNamePreservingCase(name),
+              type: inferredType
+            });
+          }
+        }
+
+        if (properties.length > 0) {
+          const clsName = this.toPascalCase(className);
+          const classNode: ClassNode = { name: clsName, properties };
+          this.classesList.push(classNode);
+          if (!rootClass) rootClass = classNode;
+        }
+      }
+
+      if (!rootClass) {
+        throw new Error("Could not detect any Python class structures in the input code.");
+      }
+
+      return {
+        classes: this.classesList,
+        rootType: { kind: 'object', targetClass: rootClass.name, isNullable: false, isOptional: false }
+      };
+    }
+
+    if (fmt === 'go') {
+      // Go Parser
+      const goStructStartRegex = /type\s+(\w+)\s+struct\s*/g;
+      let match;
+      let rootClass: ClassNode | null = null;
+
+      while ((match = goStructStartRegex.exec(codeStr)) !== null) {
+        const className = match[1];
+        const startBraceIdx = codeStr.indexOf('{', goStructStartRegex.lastIndex - 1);
+        if (startBraceIdx === -1) continue;
+
+        // Balanced brace matching
+        let braceCount = 1;
+        let endBraceIdx = -1;
+        for (let i = startBraceIdx + 1; i < codeStr.length; i++) {
+          if (codeStr[i] === '{') braceCount++;
+          else if (codeStr[i] === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+              endBraceIdx = i;
+              break;
+            }
+          }
+        }
+
+        if (endBraceIdx === -1) continue;
+        const body = codeStr.slice(startBraceIdx + 1, endBraceIdx);
+        const properties: PropertyNode[] = [];
+
+        const lines = body.split('\n');
+        for (let line of lines) {
+          line = line.trim();
+          if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
+
+          // Strip json/xml tags and default values
+          let cleanLine = line.replace(/`[^`]*`/g, '').replace(/[;{}]/g, '').trim();
+          const eqIdx = cleanLine.indexOf('=');
+          if (eqIdx !== -1) {
+            cleanLine = cleanLine.slice(0, eqIdx).trim();
+          }
+
+          const words = cleanLine.split(/\s+/);
+          if (words.length >= 2) {
+            const name = words[0];
+            const rawType = words[1];
+            if (name !== 'type' && name !== 'struct') {
+              const inferredType = this.mapCodeTypeToTypeNode(rawType);
+              properties.push({
+                name,
+                safeName: this.toSafeNamePreservingCase(name),
+                type: inferredType
+              });
+            }
+          }
+        }
+
+        if (properties.length > 0) {
+          const clsName = this.toPascalCase(className);
+          const classNode: ClassNode = { name: clsName, properties };
+          this.classesList.push(classNode);
+          if (!rootClass) rootClass = classNode;
+        }
+      }
+
+      if (!rootClass) {
+        throw new Error("Could not detect any Go struct structures in the input code.");
+      }
+
+      return {
+        classes: this.classesList,
+        rootType: { kind: 'object', targetClass: rootClass.name, isNullable: false, isOptional: false }
+      };
+    }
+
+    if (fmt === 'kotlin') {
+      // Kotlin Parser
+      const kotlinClassStartRegex = /(?:data\s+)?class\s+(\w+)/g;
+      let match;
+      let rootClass: ClassNode | null = null;
+
+      while ((match = kotlinClassStartRegex.exec(codeStr)) !== null) {
+        const className = match[1];
+
+        // Find next parenthesis '(' or brace '{'
+        let openParenIdx = -1;
+        let openBraceIdx = -1;
+        for (let i = kotlinClassStartRegex.lastIndex; i < codeStr.length; i++) {
+          if (codeStr[i] === '(' && openParenIdx === -1 && openBraceIdx === -1) openParenIdx = i;
+          if (codeStr[i] === '{' && openBraceIdx === -1 && openParenIdx === -1) openBraceIdx = i;
+          if (openParenIdx !== -1 || openBraceIdx !== -1) break;
+        }
+
+        let body = '';
+        if (openParenIdx !== -1) {
+          let parenCount = 1;
+          let closeParenIdx = -1;
+          for (let i = openParenIdx + 1; i < codeStr.length; i++) {
+            if (codeStr[i] === '(') parenCount++;
+            else if (codeStr[i] === ')') {
+              parenCount--;
+              if (parenCount === 0) {
+                closeParenIdx = i;
+                break;
+              }
+            }
+          }
+          if (closeParenIdx !== -1) {
+            body = codeStr.slice(openParenIdx + 1, closeParenIdx);
+          }
+        } else if (openBraceIdx !== -1) {
+          let braceCount = 1;
+          let closeBraceIdx = -1;
+          for (let i = openBraceIdx + 1; i < codeStr.length; i++) {
+            if (codeStr[i] === '{') braceCount++;
+            else if (codeStr[i] === '}') {
+              braceCount--;
+              if (braceCount === 0) {
+                closeBraceIdx = i;
+                break;
+              }
+            }
+          }
+          if (closeBraceIdx !== -1) {
+            body = codeStr.slice(openBraceIdx + 1, closeBraceIdx);
+          }
+        }
+
+        if (!body) continue;
+
+        const properties: PropertyNode[] = [];
+        const items = body.split(/[\n,;]/);
+        for (let item of items) {
+          item = item.trim();
+          if (!item || item.startsWith('//') || item.startsWith('/*') || item.startsWith('@')) continue;
+
+          // Strip default value assignments
+          let cleanItem = item;
+          const eqIdx = item.indexOf('=');
+          if (eqIdx !== -1) {
+            cleanItem = item.slice(0, eqIdx).trim();
+          }
+
+          const propMatch = cleanItem.match(/(?:val|var)\s+(\w+)\s*:\s*([^;=]+)/);
+          if (propMatch) {
+            const name = propMatch[1];
+            const rawType = propMatch[2].trim();
+            const inferredType = this.mapCodeTypeToTypeNode(rawType);
+            properties.push({
+              name,
+              safeName: this.toSafeNamePreservingCase(name),
+              type: inferredType
+            });
+          }
+        }
+
+        if (properties.length > 0) {
+          const clsName = this.toPascalCase(className);
+          const classNode: ClassNode = { name: clsName, properties };
+          this.classesList.push(classNode);
+          if (!rootClass) rootClass = classNode;
+        }
+      }
+
+      if (!rootClass) {
+        throw new Error("Could not detect any Kotlin class structures in the input code.");
+      }
+
+      return {
+        classes: this.classesList,
+        rootType: { kind: 'object', targetClass: rootClass.name, isNullable: false, isOptional: false }
+      };
+    }
+
+    // Default Parser (C#, Java, Dart, Swift, TS, Angular)
+    const curlyClassStartRegex = /(?:class|interface|struct|record)\s+(\w+)/g;
     let match;
     let rootClass: ClassNode | null = null;
 
-    while ((match = classRegex.exec(codeStr)) !== null) {
+    while ((match = curlyClassStartRegex.exec(codeStr)) !== null) {
       const className = match[1];
-      const body = match[2];
+      const startBraceIdx = codeStr.indexOf('{', curlyClassStartRegex.lastIndex - 1);
+      if (startBraceIdx === -1) continue;
+
+      // Balanced brace matching to extract the class body
+      let braceCount = 1;
+      let endBraceIdx = -1;
+      for (let i = startBraceIdx + 1; i < codeStr.length; i++) {
+        if (codeStr[i] === '{') braceCount++;
+        else if (codeStr[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            endBraceIdx = i;
+            break;
+          }
+        }
+      }
+
+      if (endBraceIdx === -1) continue;
+      const body = codeStr.slice(startBraceIdx + 1, endBraceIdx);
       const properties: PropertyNode[] = [];
 
       const lines = body.split('\n');
       for (let line of lines) {
         line = line.trim();
-        if (!line || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*')) continue;
+        if (!line || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*') || line.startsWith('@') || line.startsWith('[')) continue;
+
+        // Strip default value assignments (e.g. "= ...")
+        let cleanLine = line;
+        const eqIdx = line.indexOf('=');
+        if (eqIdx !== -1) {
+          cleanLine = line.slice(0, eqIdx).trim();
+        }
+
+        // Strip all common modifiers from the start of the line
+        let prev;
+        do {
+          prev = cleanLine;
+          cleanLine = cleanLine.replace(/^(?:public|private|protected|readonly|final|static|required|let|var|val|volatile|transient|override|virtual)\s+/, '');
+        } while (cleanLine !== prev);
 
         let name = '';
         let rawType = 'any';
         let isOptional = false;
 
-        // Pattern 1: TS style "id?: number"
-        const tsMatch = line.match(/^(\w+)(\?)?\s*:\s*([^;=]+)/);
-        if (tsMatch) {
-          name = tsMatch[1];
-          isOptional = tsMatch[2] === '?';
-          rawType = tsMatch[3].trim();
+        // Try TS/Swift/Dart style: "name?: Type" or "name: Type"
+        const colonMatch = cleanLine.match(/^(\w+)(\?)?\s*:\s*([^;=]+)/);
+        if (colonMatch) {
+          name = colonMatch[1];
+          isOptional = colonMatch[2] === '?';
+          rawType = colonMatch[3].trim();
         } else {
-          // Pattern 2: C#/Java/Go style "[mod] Type name [stuff]"
-          if (line.startsWith('[') || line.startsWith('@')) continue;
-          const words = line.replace(/[;{}]/g, '').split(/\s+/);
-          
+          // Java/C# style: "Type name" or "Type name { get; set; }"
+          const words = cleanLine.replace(/[;{}]/g, '').split(/\s+/);
           if (words.length >= 2) {
             const getSetIdx = words.indexOf('get');
             const cleanWords = getSetIdx !== -1 ? words.slice(0, getSetIdx) : words;
             if (cleanWords.length >= 2) {
               name = cleanWords[cleanWords.length - 1];
               rawType = cleanWords[cleanWords.length - 2];
-              
               if (name === 'set' || name === 'get' || name === 'final' || name === 'const' || name === 'readonly') {
                 continue;
               }
@@ -370,12 +629,11 @@ export class JSONParserService {
           }
         }
 
-        if (name && rawType && name !== 'class' && name !== 'interface') {
+        if (name && rawType && name !== 'class' && name !== 'interface' && name !== 'struct') {
           const inferredType = this.mapCodeTypeToTypeNode(rawType);
           inferredType.isOptional = isOptional;
-          
           properties.push({
-            name: name,
+            name,
             safeName: this.toSafeNamePreservingCase(name),
             type: inferredType
           });
@@ -384,50 +642,48 @@ export class JSONParserService {
 
       if (properties.length > 0) {
         const clsName = this.toPascalCase(className);
-        const classNode: ClassNode = {
-          name: clsName,
-          properties
-        };
+        const classNode: ClassNode = { name: clsName, properties };
         this.classesList.push(classNode);
-        if (!rootClass) {
-          rootClass = classNode;
-        }
+        if (!rootClass) rootClass = classNode;
       }
     }
 
     if (!rootClass) {
-      throw new Error("Could not detect any class, interface, or struct structures in the input code.");
+      throw new Error(`Could not detect any class, interface, or struct structures in the input code.`);
     }
 
     return {
       classes: this.classesList,
-      rootType: {
-        kind: 'object',
-        targetClass: rootClass.name,
-        isNullable: false,
-        isOptional: false
-      }
+      rootType: { kind: 'object', targetClass: rootClass.name, isNullable: false, isOptional: false }
     };
   }
 
   private mapCodeTypeToTypeNode(rawType: string): TypeNode {
-    const t = rawType.toLowerCase().replace(/[?]/g, '');
-    const isNullable = rawType.includes('?');
+    let isNullable = rawType.includes('?') || rawType.startsWith('*');
+    let t = rawType.toLowerCase().replace(/[?*]/g, '').trim();
+
+    if (t.includes('optional')) {
+      isNullable = true;
+      const optMatch = rawType.match(/Optional\s*\[\s*([^\]]+)\s*\]/i);
+      if (optMatch) {
+        t = optMatch[1].toLowerCase().trim();
+      }
+    }
 
     if (t === 'string' || t === 'str' || t.includes('char')) {
       return { kind: 'primitive', primitiveType: 'string', isNullable, isOptional: false };
     }
-    if (t === 'number' || t === 'int' || t === 'double' || t === 'float' || t === 'num' || t === 'integer' || t === 'long') {
+    if (t === 'number' || t === 'int' || t === 'double' || t === 'float' || t === 'num' || t === 'integer' || t === 'long' || t === 'float64' || t === 'float32') {
       return { kind: 'primitive', primitiveType: 'number', isNullable, isOptional: false };
     }
     if (t === 'boolean' || t === 'bool') {
       return { kind: 'primitive', primitiveType: 'boolean', isNullable, isOptional: false };
     }
-    if (t === 'date' || t === 'datetime' || t === 'time') {
+    if (t === 'date' || t === 'datetime' || t === 'time' || t === 'time.time') {
       return { kind: 'date', isNullable, isOptional: false };
     }
     if (t.includes('list') || t.includes('[]') || t.includes('array')) {
-      const genericMatch = rawType.match(/<([^>]+)>/);
+      const genericMatch = rawType.match(/<([^>]+)>/) || rawType.match(/List\s*\[\s*([^\]]+)\s*\]/i);
       const innerRaw = genericMatch ? genericMatch[1] : 'any';
       return {
         kind: 'array',
@@ -439,7 +695,7 @@ export class JSONParserService {
 
     return {
       kind: 'object',
-      targetClass: this.toPascalCase(rawType),
+      targetClass: this.toPascalCase(t),
       isNullable,
       isOptional: false
     };

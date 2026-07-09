@@ -39,7 +39,6 @@ export class App implements OnInit {
 
   public inputFormats = [
     { id: 'json', displayName: 'JSON' },
-    /*
     { id: 'xml', displayName: 'XML' },
     { id: 'yaml', displayName: 'YAML' },
     { id: 'csv', displayName: 'CSV' },
@@ -52,7 +51,6 @@ export class App implements OnInit {
     { id: 'swift', displayName: 'Swift' },
     { id: 'go', displayName: 'Go Struct' },
     { id: 'python', displayName: 'Python Dataclass' }
-    */
   ];
 
   public themes: ('dark' | 'light' | 'slate' | 'coffee' | 'cupcake' | 'synthwave' | 'dracula' | 'nord')[] = ['dark', 'light', 'slate', 'coffee', 'cupcake', 'synthwave', 'dracula', 'nord'];
@@ -80,6 +78,28 @@ export class App implements OnInit {
     email: "john@example.com",
     age: 24,
     isActive: true
+  };
+
+  private readonly defaultTemplates: { [key: string]: string } = {
+    json: JSON.stringify({
+      id: 101,
+      name: "John Doe",
+      email: "john@example.com",
+      age: 24,
+      isActive: true
+    }, null, 2),
+    xml: `<root>\n  <id>101</id>\n  <name>John Doe</name>\n  <email>john@example.com</email>\n  <age>24</age>\n  <isActive>true</isActive>\n</root>`,
+    yaml: `id: 101\nname: John Doe\nemail: john@example.com\nage: 24\nisActive: true`,
+    csv: `id,name,email,age,isActive\n101,"John Doe","john@example.com",24,true`,
+    typescript: `interface Root {\n  id: number;\n  name: string;\n  email: string;\n  age: number;\n  isActive: boolean;\n}`,
+    'angular-class': `class Root {\n  id: number;\n  name: string;\n  email: string;\n  age: number;\n  isActive: boolean;\n}`,
+    csharp: `public class Root\n{\n    public double Id { get; set; }\n    public string Name { get; set; }\n    public string Email { get; set; }\n    public double Age { get; set; }\n    public bool IsActive { get; set; }\n}`,
+    java: `public class Root {\n    private double id;\n    private String name;\n    private String email;\n    private double age;\n    private boolean isActive;\n}`,
+    kotlin: `data class Root(\n    val id: Double,\n    val name: String,\n    val email: String,\n    val age: Double,\n    val isActive: Boolean\n)`,
+    swift: `struct Root: Codable {\n    let id: Double\n    let name: String\n    let email: String\n    let age: Double\n    let isActive: Bool\n}`,
+    go: `type Root struct {\n\tId       float64 \`json:"id"\`\n\tName     string  \`json:"name"\`\n\tEmail    string  \`json:"email"\`\n\tAge      float64 \`json:"age"\`\n\tIsActive bool    \`json:"isActive"\`\n}`,
+    python: `@dataclass\nclass Root:\n    id: float\n    name: str\n    email: str\n    age: float\n    isActive: bool`,
+    dart: `class Root {\n  final double id;\n  final String name;\n  final String email;\n  final double age;\n  final bool isActive;\n\n  Root({\n    required this.id,\n    required this.name,\n    required this.email,\n    required this.age,\n    required this.isActive,\n  });\n}`
   };
 
 
@@ -196,15 +216,16 @@ export class App implements OnInit {
   setInputFormat(format: string) {
     const current = this.jsonInput().trim();
     
-    // Check if input is empty or matches the default JSON
-    const isDefault = !current || 
-      current === JSON.stringify(this.defaultJson, null, 2).trim();
+    // Check if input is empty or matches ANY default template
+    const defaultVals = Object.values(this.defaultTemplates).map(v => v.trim());
+    const isDefault = !current || defaultVals.includes(current);
 
     this.inputFormat.set(format);
     
     if (isDefault) {
-      if (format === 'json') {
-        this.jsonInput.set(JSON.stringify(this.defaultJson, null, 2));
+      const template = this.defaultTemplates[format];
+      if (template) {
+        this.jsonInput.set(template);
       }
     }
     

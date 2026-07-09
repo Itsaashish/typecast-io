@@ -153,7 +153,7 @@
           [ngClass]="{'border-primary bg-primary/5': isDragOver()}"
           class="flex-1 relative flex flex-col border-2 border-transparent transition">
           <!-- Monaco Input -->
-          <div class="flex-1">
+          <div class="flex-1 relative min-h-[300px] lg:min-h-0">
             <app-code-editor [value]="jsonInput()" (valueChange)="onJsonChange($event)" [language]="inputFormat()"
               [readOnly]="false" wordWrap="off"></app-code-editor>
           </div>
@@ -256,7 +256,7 @@
         </div>
 
         <!-- Editor Output -->
-        <div class="flex-1 relative">
+        <div class="flex-1 relative min-h-[300px] lg:min-h-0">
           <app-code-editor [value]="generatedCode()" [language]="languageService.activeGenerator().languageId"
             [readOnly]="true" [wordWrap]="wordWrap()"></app-code-editor>
 
