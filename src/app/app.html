@@ -154,8 +154,8 @@
           class="flex-1 relative flex flex-col border-2 border-transparent transition">
           <!-- Monaco Input -->
           <div class="flex-1">
-            <app-monaco-editor [value]="jsonInput()" (valueChange)="onJsonChange($event)" [language]="inputFormat()"
-              [readOnly]="false" wordWrap="off"></app-monaco-editor>
+            <app-code-editor [value]="jsonInput()" (valueChange)="onJsonChange($event)" [language]="inputFormat()"
+              [readOnly]="false" wordWrap="off"></app-code-editor>
           </div>
 
           <!-- Drag and Drop overlay indicator -->
@@ -257,8 +257,8 @@
 
         <!-- Editor Output -->
         <div class="flex-1 relative">
-          <app-monaco-editor [value]="generatedCode()" [language]="languageService.activeGenerator().languageId"
-            [readOnly]="true" [wordWrap]="wordWrap()"></app-monaco-editor>
+          <app-code-editor [value]="generatedCode()" [language]="languageService.activeGenerator().languageId"
+            [readOnly]="true" [wordWrap]="wordWrap()"></app-code-editor>
 
           <!-- Generation loading overlay -->
           <div *ngIf="isGenerating()"

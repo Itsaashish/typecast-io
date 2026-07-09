@@ -65,7 +65,7 @@ export class PythonGenerator extends BaseGenerator {
       const isNull = (prop.type.isNullable || prop.type.isOptional) && options.isNullableEnabled;
       const typeStr = this.mapType(prop.type, options);
       
-      const snakeName = this.toSnakeCase(prop.name);
+      const snakeName = prop.safeName;
       if (isNull) {
         out += `    ${snakeName}: Optional[${typeStr}] = None\n`;
       } else {

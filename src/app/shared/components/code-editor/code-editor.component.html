@@ -1,0 +1,29 @@
+<div class="code-editor-container flex font-mono text-sm h-full w-full relative bg-base-300/40 rounded-xl border border-base-content/10 overflow-hidden focus-within:border-primary/50 transition">
+  
+  <!-- Line Numbers Gutter -->
+  <div *ngIf="wordWrap === 'off'" #gutter class="line-numbers-gutter flex flex-col text-right select-none pr-3 pl-4 py-4 text-base-content/30 bg-base-200/30 border-r border-base-content/5 overflow-hidden h-full">
+    <div *ngFor="let num of lineNumbers" class="h-6 leading-6 text-[11px] font-medium font-mono">
+      {{ num }}
+    </div>
+  </div>
+
+  <!-- Textarea Area -->
+  <div class="flex-1 relative h-full overflow-hidden">
+    <textarea
+      #textarea
+      [value]="value"
+      (input)="onInput($event)"
+      (scroll)="onScroll()"
+      [readOnly]="readOnly"
+      spellcheck="false"
+      [placeholder]="readOnly ? 'No output generated yet.' : 'Paste or type JSON here...'"
+      [ngClass]="{
+        'whitespace-pre': wordWrap === 'off',
+        'whitespace-pre-wrap': wordWrap === 'on',
+        'overflow-x-auto': wordWrap === 'off',
+        'overflow-x-hidden': wordWrap === 'on'
+      }"
+      class="w-full h-full p-4 bg-transparent text-base-content border-none outline-none focus:outline-none focus:ring-0 font-mono text-sm leading-6 resize-none overflow-y-auto"
+    ></textarea>
+  </div>
+</div>

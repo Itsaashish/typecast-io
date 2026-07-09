@@ -7,7 +7,7 @@ import { JSONParserService } from './core/services/json-parser.service';
 import { ClipboardService } from './core/services/clipboard.service';
 import { DownloadService } from './core/services/download.service';
 import { ToastService } from './core/services/toast.service';
-import { MonacoEditorComponent } from './shared/components/monaco-editor/monaco-editor.component';
+import { CodeEditorComponent } from './shared/components/code-editor/code-editor.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
 import { BaseGenerator } from './core/generators/base.generator';
 
@@ -17,7 +17,7 @@ import { BaseGenerator } from './core/generators/base.generator';
   imports: [
     CommonModule,
     FormsModule,
-    MonacoEditorComponent,
+    CodeEditorComponent,
     ToastComponent
   ],
   templateUrl: './app.html',

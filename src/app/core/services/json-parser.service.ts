@@ -30,6 +30,34 @@ export class JSONParserService {
   }
 
   /**
+   * Helper to sanitize a key name to be a valid identifier while preserving JSON casing
+   */
+  public toSafeNamePreservingCase(str: string): string {
+    if (!str) return 'variable';
+    let clean = str.replace(/[^a-zA-Z0-9_]/g, '_');
+    clean = clean.replace(/__+/g, '_');
+    if (/^[0-9]/.test(clean)) {
+      clean = '_' + clean;
+    }
+    if (!clean || /^_+$/.test(clean)) {
+      clean = 'field_' + (clean || 'value');
+    }
+    const keywords = new Set([
+      'class', 'interface', 'struct', 'enum', 'import', 'export', 'public', 'private', 'protected',
+      'var', 'let', 'const', 'function', 'return', 'if', 'else', 'for', 'while', 'do', 'switch',
+      'case', 'break', 'continue', 'new', 'this', 'super', 'default', 'package', 'package-private',
+      'func', 'type', 'defer', 'go', 'map', 'chan', 'select', 'fallthrough',
+      'fn', 'impl', 'pub', 'use', 'mod', 'trait', 'as', 'in', 'is', 'not', 'and', 'or', 'lambda',
+      'def', 'del', 'elif', 'except', 'finally', 'from', 'global', 'nonlocal', 'pass', 'raise',
+      'try', 'with', 'yield', 'assert', 'async', 'await'
+    ]);
+    if (keywords.has(clean.toLowerCase())) {
+      clean = '_' + clean;
+    }
+    return clean;
+  }
+
+  /**
    * Helper to convert string to PascalCase
    */
   public toPascalCase(str: string): string {
@@ -348,7 +376,7 @@ export class JSONParserService {
           
           properties.push({
             name: name,
-            safeName: this.toCamelCase(name),
+            safeName: this.toSafeNamePreservingCase(name),
             type: inferredType
           });
         }
@@ -655,7 +683,7 @@ export class JSONParserService {
         const propType = this.inferType(val, k, className);
         properties.push({
           name: k,
-          safeName: this.toCamelCase(k),
+          safeName: this.toSafeNamePreservingCase(k),
           type: propType
         });
       }
@@ -714,7 +742,7 @@ export class JSONParserService {
 
       properties.push({
         name: key,
-        safeName: this.toCamelCase(key),
+        safeName: this.toSafeNamePreservingCase(key),
         type: mergedType
       });
     }
